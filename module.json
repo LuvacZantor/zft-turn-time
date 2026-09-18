@@ -1,0 +1,23 @@
+{
+  "id": "zft-turn-time",
+  "title": "ZFT Turn Time",
+  "description": "Tracks real-world combat turn duration per actor and user in Foundry VTT V13.",
+  "version": "0.1.9",
+  "authors": [
+    {
+      "name": "ZFT"
+    }
+  ],
+  "compatibility": {
+    "minimum": "13",
+    "verified": "13.351",
+    "maximum": "13"
+  },
+  "esmodules": [
+    "scripts/main.js"
+  ],
+  "styles": [
+    "styles/zft-turn-time.css"
+  ],
+  "socket": false
+}
