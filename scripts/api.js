@@ -1,6 +1,6 @@
 import { getCampaignStats, getCombatState, resetCampaignStats } from "./store.js";
 import { formatDuration, postCombatReport, refreshCombatTracker } from "./ui.js";
-import { isPrimaryGM } from "./timer.js";
+import { isPrimaryGM, pauseTimer, resumeTimer, toggleTimer } from "./timer.js";
 
 export function buildAPI() {
   return Object.freeze({
@@ -10,6 +10,10 @@ export function buildAPI() {
 
     get combatState() {
       return getCombatState(game.combat);
+    },
+
+    get isPaused() {
+      return Boolean(getCombatState(game.combat).active?.paused);
     },
 
     getActorStats(actorOrId) {
@@ -33,6 +37,9 @@ export function buildAPI() {
       return true;
     },
 
+    pauseTimer,
+    resumeTimer,
+    toggleTimer,
     postCombatReport,
     formatDuration,
     isPrimaryGM

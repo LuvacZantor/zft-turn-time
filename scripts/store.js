@@ -6,7 +6,7 @@ export function emptyCampaignStats() {
 
 export function emptyCombatState() {
   return {
-    schema: 1,
+    schema: 2,
     active: null,
     combatants: {}
   };
@@ -44,14 +44,25 @@ export function normalizeCombatState(raw) {
   const state = emptyCombatState();
 
   const active = source.active;
-  if (active?.combatantId && Number.isFinite(Number(active.startedAt))) {
-    state.active = {
-      combatantId: String(active.combatantId),
-      actorId: active.actorId ? String(active.actorId) : null,
-      startedAt: Number(active.startedAt),
-      round: Number.isFinite(Number(active.round)) ? Number(active.round) : null,
-      turn: Number.isFinite(Number(active.turn)) ? Number(active.turn) : null
-    };
+  if (active?.combatantId) {
+    const paused = Boolean(active.paused);
+    const startedAt = Number.isFinite(Number(active.startedAt)) ? Number(active.startedAt) : null;
+    const accumulatedMs = Number.isFinite(Number(active.accumulatedMs))
+      ? Math.max(0, Number(active.accumulatedMs))
+      : 0;
+
+    // Schema 1 compatibility: legacy active records only had startedAt.
+    if (paused || startedAt !== null) {
+      state.active = {
+        combatantId: String(active.combatantId),
+        actorId: active.actorId ? String(active.actorId) : null,
+        startedAt: paused ? null : startedAt,
+        accumulatedMs,
+        paused,
+        round: Number.isFinite(Number(active.round)) ? Number(active.round) : null,
+        turn: Number.isFinite(Number(active.turn)) ? Number(active.turn) : null
+      };
+    }
   }
 
   for (const [id, value] of Object.entries(source.combatants ?? {})) {

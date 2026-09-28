@@ -33,9 +33,24 @@ function activeRecord(combat, combatant) {
     combatantId: combatant.id,
     actorId: combatant.actor?.id ?? null,
     startedAt: Date.now(),
+    accumulatedMs: 0,
+    paused: false,
     round: combat.round ?? null,
     turn: combat.turn ?? null
   };
+}
+
+export function getActiveElapsedMs(active, now = Date.now()) {
+  if (!active?.combatantId) return null;
+
+  const accumulatedMs = Number.isFinite(Number(active.accumulatedMs))
+    ? Math.max(0, Number(active.accumulatedMs))
+    : 0;
+
+  if (active.paused) return accumulatedMs;
+  if (!Number.isFinite(Number(active.startedAt))) return null;
+
+  return accumulatedMs + Math.max(0, now - Number(active.startedAt));
 }
 
 function resolveTurnUsers(combatant) {
@@ -87,7 +102,6 @@ async function beginCombat(combat) {
     );
   }
 }
-
 
 async function recordCompletedTurn(combat, state, combatant, elapsedMs, { reason = "turn-change" } = {}) {
   if (!combatant) {
@@ -144,10 +158,10 @@ async function finalizeCombat(combat) {
 
   const state = getCombatState(combat);
   const active = state.active;
+  const elapsedMs = getActiveElapsedMs(active);
 
-  if (active?.combatantId && Number.isFinite(active.startedAt)) {
+  if (active?.combatantId && Number.isFinite(elapsedMs)) {
     const combatant = combat.combatants?.get(active.combatantId);
-    const elapsedMs = Date.now() - active.startedAt;
 
     await recordCompletedTurn(combat, state, combatant, elapsedMs, {
       reason: "combat-end"
@@ -207,15 +221,15 @@ async function processTurnChange(combat, prior, current) {
   }
 
   const active = state.active;
+  const elapsedMs = getActiveElapsedMs(active);
   const canComplete =
     active?.combatantId &&
     previousId &&
     active.combatantId === previousId &&
-    Number.isFinite(active.startedAt);
+    Number.isFinite(elapsedMs);
 
   if (canComplete) {
     const combatant = combat.combatants?.get(previousId);
-    const elapsedMs = Date.now() - active.startedAt;
 
     if (!combatant) {
       console.warn(`[ZFT] ⚠️ Prior combatant missing; sample discarded | combatant=${previousId}`);
@@ -239,14 +253,78 @@ async function processTurnChange(combat, prior, current) {
   );
 }
 
+async function setTimerPaused(combat, paused) {
+  if (!isPrimaryGM()) {
+    ui.notifications?.warn("ZFT Turn Time: Only the primary active GM can control the timer.");
+    return false;
+  }
+
+  if (!combat) {
+    ui.notifications?.warn("ZFT Turn Time: No active combat.");
+    return false;
+  }
+
+  const state = getCombatState(combat);
+  const active = state.active;
+
+  if (!active?.combatantId) {
+    ui.notifications?.warn("ZFT Turn Time: No active turn timer.");
+    return false;
+  }
+
+  if (paused) {
+    if (active.paused) return true;
+
+    const elapsedMs = getActiveElapsedMs(active);
+    if (!Number.isFinite(elapsedMs)) {
+      console.warn(`[ZFT] ⚠️ Cannot pause timer: active elapsed time is invalid | combat=${combat.id}`);
+      return false;
+    }
+
+    active.accumulatedMs = elapsedMs;
+    active.startedAt = null;
+    active.paused = true;
+  } else {
+    if (!active.paused) return true;
+
+    active.startedAt = Date.now();
+    active.paused = false;
+  }
+
+  await setCombatState(combat, state);
+  Hooks.callAll(`${MODULE_ID}.timerStateChanged`, combat, state);
+
+  console.log(
+    `[ZFT] ${paused ? "⏸️" : "▶️"} Turn timer ${paused ? "paused" : "resumed"} | combat=${combat.id} | combatant=${active.combatantId} | elapsedMs=${getActiveElapsedMs(active) ?? "invalid"}`
+  );
+
+  return true;
+}
+
 function enqueueTransition(task) {
   transitionQueue = transitionQueue
     .then(task)
     .catch(error => {
       console.error("[ZFT] ❌ Turn timing transition failed", error);
+      return false;
     });
 
   return transitionQueue;
+}
+
+export function pauseTimer(combat = game.combat) {
+  return enqueueTransition(() => setTimerPaused(combat, true));
+}
+
+export function resumeTimer(combat = game.combat) {
+  return enqueueTransition(() => setTimerPaused(combat, false));
+}
+
+export function toggleTimer(combat = game.combat) {
+  return enqueueTransition(async () => {
+    const state = getCombatState(combat);
+    return setTimerPaused(combat, !state.active?.paused);
+  });
 }
 
 export function registerTimerHooks() {

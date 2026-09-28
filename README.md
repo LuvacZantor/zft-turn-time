@@ -1,25 +1,29 @@
 # ZFT Turn Time
 
-Foundry VTT V13 module for tracking real-world combat turn duration.
+ZFT Turn Time is a Foundry VTT V13 module for tracking real-world combat turn duration by combatant, actor, and user.
 
 ## Target
 
-- Foundry VTT V13, verified target Build 351
+- Foundry VTT V13, verified on Build 351
 - System-agnostic core
-- No hard dependency on DnD5e, MidiQOL, CPR, DAE, SocketLib, or Effect Macro
+- No hard dependency on D&D5e, MidiQOL, CPR, DAE, SocketLib, or Effect Macro
 
 ## Features
 
 - Primary-active-GM single-writer timing
 - Uses Foundry V13 `combatStart` and `combatTurnChange`
 - Live current-turn timer in the Combat Tracker
+- Turn timing displayed beneath the combatant name to preserve horizontal tracker space
+- GM-controlled pause/resume timer
+- Paused time excluded from turn duration, averages, and totals
+- Dedicated Pause/Resume and Report control row beneath Foundry's native combat controls
 - Campaign actor averages
 - User averages
 - Per-combat encounter combatant statistics
 - Maximum turn length rejection
 - Optional NPC exclusion
 - Optional campaign-stat reset on each combat
-- Chat report button
+- Manual chat report button
 - Automatic end-of-combat chat report
 - Public module API
 
@@ -29,22 +33,41 @@ Copy the `zft-turn-time` folder into:
 
 `{Foundry User Data}/Data/modules/`
 
-Restart Foundry, enable **ZFT Turn Time** in the world, and reload.
+Enable **ZFT Turn Time** in the world and reload Foundry.
 
-## API
+## Combat Tracker
 
-```js
-const api = game.modules.get("zft-turn-time")?.api;
+The active combatant displays live turn timing beneath the combatant name.
 
-api.campaignStats;
-api.combatState;
-api.getActorStats(actorId);
-api.getUserStats(userId);
-api.formatDuration(65000);
-await api.postCombatReport();
-await api.resetCampaignStats();
-api.isPrimaryGM();
+Example:
+
+```text
+Warrior Veteran
+⏱ 18s · avg 22s
 ```
+
+While paused:
+
+```text
+Warrior Veteran
+⏸ 18s · avg 22s
+```
+
+The module adds its own control row beneath Foundry's native combat controls:
+
+```text
+[ Pause Timer / Resume Timer ]   [ Report ]
+```
+
+Foundry's native combat controls are not modified.
+
+## Pause / Resume Behavior
+
+Pause freezes the active turn timer at its current elapsed duration.
+
+Resume continues from that saved active duration rather than including the paused wall-clock interval.
+
+If the turn advances or combat ends while paused, only the accumulated active time is recorded.
 
 ## Data Model
 
@@ -56,24 +79,108 @@ Current encounter state is stored on the Combat document flag:
 
 `flags.zft-turn-time.combatState`
 
-The active stopwatch timestamp is written only when a combat starts or advances. There is no per-second document write.
+The active timer state includes:
+
+- current combatant ID
+- actor ID
+- active start timestamp
+- accumulated active milliseconds
+- paused state
+- round
+- turn
+
+The module does not write timing state every second. Combat state is written only when combat starts, advances, pauses, resumes, or otherwise needs to persist a transition.
+
+## Public API
+
+```js
+const api = game.modules.get("zft-turn-time")?.api;
+
+api.campaignStats;
+api.combatState;
+api.isPaused;
+
+api.getActorStats(actorId);
+api.getUserStats(userId);
+api.formatDuration(65000);
+
+await api.pauseTimer();
+await api.resumeTimer();
+await api.toggleTimer();
+await api.postCombatReport();
+await api.resetCampaignStats();
+
+api.isPrimaryGM();
+```
+
+## Reports
+
+The Report button posts encounter timing statistics to chat.
+
+Reports include:
+
+- Combatant
+- Average turn duration
+- Recorded turn count
+- Total recorded time
+
+If automatic end-of-combat reporting is enabled, the module finalizes the currently active turn before generating the report. This includes the last combatant's turn, even if combat is ended while that timer is paused.
+
+## Settings
+
+### Track NPC Turns
+
+Controls whether NPC combatants contribute timing samples.
+
+### Maximum Turn Length
+
+Completed turns longer than this value are discarded.
+
+Set the value to `0` to disable the maximum duration check.
+
+### Combat Tracker Display
+
+Controls which timing information appears in the Combat Tracker:
+
+- Current timer + average
+- Current timer only
+- Average only
+- Hidden
+
+### Reset Campaign Statistics Each Combat
+
+Clears persistent campaign actor/user aggregates whenever a new combat begins.
+
+Encounter statistics are always scoped to the current Combat document.
+
+### Show Combat Report Button
+
+Controls whether the Report button is displayed in the Combat Tracker.
+
+### Post Report When Combat Ends
+
+Automatically posts the encounter timing report when combat ends.
 
 ## Diagnostic Logging
 
-All module console logs begin with `[ZFT]`.
+All module diagnostic logs begin with:
+
+```text
+[ZFT]
+```
 
 Expected initialization:
 
 ```text
-[ZFT] 🛠️ v0.1.9 | Initializing ZFT Turn Time
+[ZFT] 🛠️ v0.2.0 | Initializing ZFT Turn Time
 [ZFT] ⚙️ Turn Time settings registered
 [ZFT] 🪝 Combat timing hooks registered
 [ZFT] 🖥️ Combat Tracker UI hooks registered
-[ZFT] ✅ v0.1.9 | ZFT Turn Time initialized
-[ZFT] 🚦 v0.1.9 | Ready | ...
+[ZFT] ✅ v0.2.0 | ZFT Turn Time initialized
+[ZFT] 🚦 v0.2.0 | Ready | ...
 ```
 
-Expected combat transition:
+Expected turn transition:
 
 ```text
 [ZFT] ⏱️ Combat timing started | ...
@@ -81,85 +188,47 @@ Expected combat transition:
 [ZFT] ▶️ Next turn timer armed | ...
 ```
 
-## Validation Procedure
+Expected pause/resume:
 
-1. Install and enable the module in a V13.351 world.
-2. Open browser dev tools and clear the console.
-3. Create a combat with at least two combatants.
-4. Start combat as the GM.
-5. Confirm the active combatant shows a ticking stopwatch badge.
-6. Wait several seconds and advance to the next combatant.
-7. Confirm the previous actor now has an average and the next actor has a live timer.
-8. Advance through at least one full round.
-9. Click the stopwatch report button in the Combat Tracker.
-10. Confirm a chat table is posted with Average, Turns, and Total.
-11. In the console run:
-   `game.modules.get("zft-turn-time").api.campaignStats`
-12. Confirm actor/user aggregate data exists.
-13. Test an NPC with **Track NPC Turns** disabled and confirm the console reports the NPC sample was skipped.
-14. Temporarily set **Maximum Turn Length** to 2 seconds, take a >2 second turn, and confirm the sample is rejected with a `[ZFT] ⚠️` diagnostic.
-
-## Expected Success Behavior
-
-- Exactly one completed-turn sample is recorded per turn.
-- Only the deterministic primary active GM writes timing data.
-- Live display updates once per second without database writes.
-- Campaign actor averages survive combat deletion and world reloads.
-- Encounter statistics remain scoped to the Combat document.
-- Invalid/overlong samples do not change averages.
+```text
+[ZFT] ⏸️ Turn timer paused | combat=... | combatant=... | elapsedMs=...
+[ZFT] ▶️ Turn timer resumed | combat=... | combatant=... | elapsedMs=...
+```
 
 ## V13 Combat Start Ordering
 
-Foundry V13 may fire `combatStart` before `combat.combatant` is populated. The module therefore treats
-`combatTurnChange` as the authoritative recovery point for the first turn and arms the timer there if
-the initial `combatStart` state was empty.
+Foundry V13 may fire `combatStart` before `combat.combatant` is populated.
 
-## v0.1.9 Fix
+ZFT Turn Time therefore treats `combatTurnChange` as the authoritative recovery point for the first turn and arms the timer there if the initial `combatStart` state does not yet contain an active combatant.
 
-Corrected the V13 Combat Tracker UI regression introduced in v0.1.3 where `stateOverride`
-was referenced inside `decorateCombatTracker()` even though it is only valid for report generation.
+## Validation
 
-Expected result:
-- live tracker timing renders again,
-- first-turn recovery remains intact,
-- automatic end-of-combat report remains enabled.
+Recommended release validation:
 
-## v0.1.9 Presentation Fix
+1. Start combat with at least two combatants.
+2. Confirm the active combatant timer updates once per second.
+3. Confirm timing appears beneath the combatant name in both the sidebar and popped-out Encounter Tracker.
+4. Confirm Foundry's native combat controls remain visible and unchanged.
+5. Pause the active timer and confirm the displayed duration stops advancing.
+6. Resume and confirm timing continues from the paused value.
+7. Advance a normal active turn and confirm exactly one sample is recorded.
+8. Advance a turn while paused and confirm only accumulated active time is recorded.
+9. End combat while paused and confirm the final combatant is included in the automatic report.
+10. Confirm the Report button posts Average, Turns, and Total for the encounter.
+11. Confirm NPC exclusion and maximum-turn rejection settings behave as configured.
+12. Confirm campaign actor/user aggregates remain available through the public API.
 
-Improved chat report layout for narrow Foundry chat cards:
-- compact `Avg` header,
-- numeric columns remain on one line,
-- Combatant column takes the flexible width,
-- long names wrap cleanly,
-- report can horizontally scroll as a final fallback instead of clipping.
+## v0.2.0
 
-## v0.1.9 Encounter Reset Fix
+- Added GM-controlled pause/resume support.
+- Paused wall-clock time is excluded from turn statistics.
+- Advancing or ending combat while paused records only accumulated active time.
+- Added `pauseTimer()`, `resumeTimer()`, `toggleTimer()`, and `isPaused` to the public API.
+- Moved turn timing beneath the combatant name to prevent horizontal crowding.
+- Added a dedicated module control row for Pause/Resume and Report.
+- Preserved Foundry's native Combat Tracker control row and layout.
+- Existing schema 1 active timer flags remain readable and normalize into the current combat-state schema.
 
-Combat Tracker display is now strictly scoped to the current Combatant in the current encounter.
+## License
 
-Previous campaign Actor/User aggregates are no longer used as a visual fallback when a new
-combat begins. This means:
-- average starts empty for a new encounter,
-- recorded turn count starts at zero,
-- same token/Actor history from prior combats does not appear in the tracker,
-- campaign aggregates remain available through the module API for future analytics.
-
-## v0.1.9 Report Speaker Fix
-
-Turn Time reports now use the currently logged-in GM user name as the chat speaker.
-Selected tokens/actors no longer determine the report speaker.
-
-Expected console confirmation:
-
-`[ZFT] 📊 Combat timing report posted | ... | speaker=<GM Name>`
-
-## v0.1.9 Popout Live Timer Fix
-
-The once-per-second live timer refresh now updates every rendered Combat Tracker instance,
-including both the sidebar tracker and a popped-out Encounter/Combat Tracker window.
-
-No popout layout or styling changes are made.
-
-Expected render diagnostic:
-
-`[ZFT] 🪟 Combat Tracker rendered | ... | rows=<n>`
+MIT License. See `LICENSE`.

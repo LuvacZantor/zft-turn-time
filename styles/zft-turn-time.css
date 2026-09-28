@@ -1,16 +1,27 @@
+.zft-turn-time-info {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin-top: 0.12rem;
+  font-size: 0.72rem;
+  font-weight: 400;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
 .zft-turn-time-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  flex: 0 0 auto;
-  margin-inline-end: 0.35rem;
-  padding: 0.08rem 0.3rem;
-  border: 1px solid var(--color-border-light-tertiary, #777);
-  border-radius: 4px;
-  font-size: 0.72rem;
-  line-height: 1.2;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
   white-space: nowrap;
-  opacity: 0.88;
+  opacity: 0.8;
 }
 
 .zft-turn-time-badge.is-active {
@@ -18,21 +29,48 @@
   opacity: 1;
 }
 
+.zft-turn-time-badge.is-paused {
+  font-style: italic;
+}
+
 .zft-turn-time-badge .zft-current::before {
   content: "⏱ ";
+}
+
+.zft-turn-time-badge.is-paused .zft-current::before {
+  content: "⏸ ";
 }
 
 .zft-turn-time-badge .zft-average {
   opacity: 0.8;
 }
 
-.zft-turn-time-report {
-  flex: 0 0 auto;
-  width: 2rem;
-  min-width: 2rem;
+.zft-turn-time-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem 0.45rem;
+  border-top: 1px solid var(--color-border-light-tertiary, #777);
+}
+
+.zft-turn-time-controls .zft-turn-time-report,
+.zft-turn-time-controls .zft-turn-time-pause {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
   height: 2rem;
-  padding: 0;
-  margin-inline-start: 0.25rem;
+  margin: 0;
+  padding: 0 0.5rem;
+}
+
+.zft-turn-time-pause:disabled {
+  opacity: 0.5;
 }
 
 .zft-turn-time-chat-report {

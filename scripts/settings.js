@@ -73,7 +73,6 @@ export function registerSettings() {
     onChange: refreshCombatTracker
   });
 
-
   game.settings.register(MODULE_ID, SETTINGS.AUTO_REPORT_END, {
     name: "Post Report When Combat Ends",
     hint: "Automatically post the encounter turn-time report to chat when combat is ended.",
