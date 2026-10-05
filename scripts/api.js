@@ -1,6 +1,13 @@
 import { getCampaignStats, getCombatState, resetCampaignStats } from "./store.js";
 import { formatDuration, postCombatReport, refreshCombatTracker } from "./ui.js";
-import { isPrimaryGM, pauseTimer, resumeTimer, toggleTimer } from "./timer.js";
+import {
+  isPrimaryGM,
+  pauseTimer,
+  resetTimer,
+  resumeTimer,
+  setTimerElapsed,
+  toggleTimer
+} from "./timer.js";
 
 export function buildAPI() {
   return Object.freeze({
@@ -40,6 +47,8 @@ export function buildAPI() {
     pauseTimer,
     resumeTimer,
     toggleTimer,
+    resetTimer,
+    setTimerElapsed,
     postCombatReport,
     formatDuration,
     isPrimaryGM
