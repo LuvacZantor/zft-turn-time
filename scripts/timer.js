@@ -301,51 +301,6 @@ async function setTimerPaused(combat, paused) {
   return true;
 }
 
-async function setActiveTimerElapsed(combat, elapsedMs, { action = "edited" } = {}) {
-  if (!isPrimaryGM()) {
-    ui.notifications?.warn("ZFT Turn Time: Only the primary active GM can control the timer.");
-    return false;
-  }
-
-  if (!combat) {
-    ui.notifications?.warn("ZFT Turn Time: No active combat.");
-    return false;
-  }
-
-  const normalizedMs = Number(elapsedMs);
-  if (!Number.isFinite(normalizedMs) || normalizedMs < 0) {
-    ui.notifications?.warn("ZFT Turn Time: Timer value must be zero or greater.");
-    return false;
-  }
-
-  const state = getCombatState(combat);
-  const active = state.active;
-
-  if (!active?.combatantId) {
-    ui.notifications?.warn("ZFT Turn Time: No active turn timer.");
-    return false;
-  }
-
-  active.accumulatedMs = normalizedMs;
-  active.startedAt = active.paused ? null : Date.now();
-
-  await setCombatState(combat, state);
-  Hooks.callAll(`${MODULE_ID}.timerStateChanged`, combat, state);
-
-  const combatant = combat.combatants?.get(active.combatantId);
-  const name = combatant?.name ?? combatant?.actor?.name ?? "Current combatant";
-  const verb = action === "reset" ? "reset" : "updated";
-  const icon = action === "reset" ? "🔄" : "✏️";
-
-  ui.notifications?.info(`ZFT Turn Time: ${name} timer ${verb}.`);
-
-  console.log(
-    `[ZFT] ${icon} Turn timer ${verb} | combat=${combat.id} | combatant=${active.combatantId} | elapsedMs=${normalizedMs} | paused=${Boolean(active.paused)}`
-  );
-
-  return true;
-}
-
 function enqueueTransition(task) {
   transitionQueue = transitionQueue
     .then(task)
@@ -370,14 +325,6 @@ export function toggleTimer(combat = game.combat) {
     const state = getCombatState(combat);
     return setTimerPaused(combat, !state.active?.paused);
   });
-}
-
-export function resetTimer(combat = game.combat) {
-  return enqueueTransition(() => setActiveTimerElapsed(combat, 0, { action: "reset" }));
-}
-
-export function setTimerElapsed(elapsedMs, combat = game.combat) {
-  return enqueueTransition(() => setActiveTimerElapsed(combat, elapsedMs, { action: "edited" }));
 }
 
 export function registerTimerHooks() {
