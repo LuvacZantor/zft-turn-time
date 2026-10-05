@@ -184,12 +184,12 @@ All module diagnostic logs begin with:
 Expected initialization:
 
 ```text
-[ZFT] 🛠️ v0.3.0-dev.1 | Initializing ZFT Turn Time
+[ZFT] 🛠️ v0.3.0-dev.2 | Initializing ZFT Turn Time
 [ZFT] ⚙️ Turn Time settings registered
 [ZFT] 🪝 Combat timing hooks registered
 [ZFT] 🖥️ Combat Tracker UI hooks registered
-[ZFT] ✅ v0.3.0-dev.1 | ZFT Turn Time initialized
-[ZFT] 🚦 v0.3.0-dev.1 | Ready | ...
+[ZFT] ✅ v0.3.0-dev.2 | ZFT Turn Time initialized
+[ZFT] 🚦 v0.3.0-dev.2 | Ready | ...
 ```
 
 Expected turn transition:
@@ -232,6 +232,11 @@ Recommended release validation:
 13. Confirm the Report button posts Average, Turns, and Total for the encounter.
 14. Confirm NPC exclusion and maximum-turn rejection settings behave as configured.
 15. Confirm campaign actor/user aggregates remain available through the public API.
+
+## v0.3.0-dev.2
+
+- Added color-coded timer controls: Pause amber, Resume green, Reset red, Edit blue, and Report purple.
+- Added stronger matching hover states while keeping the button treatment restrained.
 
 ## v0.3.0-dev.1
 

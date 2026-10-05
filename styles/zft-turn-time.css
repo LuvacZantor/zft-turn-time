@@ -83,6 +83,43 @@
   padding: 0;
 }
 
+.zft-turn-time-controls button {
+  --zft-control-accent: #777;
+  border: 1px solid color-mix(in srgb, var(--zft-control-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--zft-control-accent) 18%, transparent);
+  transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.zft-turn-time-controls button i {
+  color: var(--zft-control-accent);
+}
+
+.zft-turn-time-controls button:hover:not(:disabled) {
+  border-color: var(--zft-control-accent);
+  background: color-mix(in srgb, var(--zft-control-accent) 32%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--zft-control-accent) 28%, transparent) inset;
+}
+
+.zft-turn-time-controls .zft-turn-time-pause {
+  --zft-control-accent: #d99a2b;
+}
+
+.zft-turn-time-controls .zft-turn-time-pause.is-paused {
+  --zft-control-accent: #43a047;
+}
+
+.zft-turn-time-controls .zft-turn-time-reset {
+  --zft-control-accent: #c84b4b;
+}
+
+.zft-turn-time-controls .zft-turn-time-edit {
+  --zft-control-accent: #3f8dcc;
+}
+
+.zft-turn-time-controls .zft-turn-time-report {
+  --zft-control-accent: #8b62c4;
+}
+
 .zft-turn-time-controls button:disabled {
   opacity: 0.5;
 }
