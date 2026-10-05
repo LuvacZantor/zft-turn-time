@@ -184,12 +184,12 @@ All module diagnostic logs begin with:
 Expected initialization:
 
 ```text
-[ZFT] 🛠️ v0.3.0 | Initializing ZFT Turn Time
+[ZFT] 🛠️ v0.3.0-dev.1 | Initializing ZFT Turn Time
 [ZFT] ⚙️ Turn Time settings registered
 [ZFT] 🪝 Combat timing hooks registered
 [ZFT] 🖥️ Combat Tracker UI hooks registered
-[ZFT] ✅ v0.3.0 | ZFT Turn Time initialized
-[ZFT] 🚦 v0.3.0 | Ready | ...
+[ZFT] ✅ v0.3.0-dev.1 | ZFT Turn Time initialized
+[ZFT] 🚦 v0.3.0-dev.1 | Ready | ...
 ```
 
 Expected turn transition:
@@ -233,7 +233,7 @@ Recommended release validation:
 14. Confirm NPC exclusion and maximum-turn rejection settings behave as configured.
 15. Confirm campaign actor/user aggregates remain available through the public API.
 
-## v0.3.0
+## v0.3.0-dev.1
 
 - Added an icon-only Reset control with tooltip for the current active turn timer.
 - Added an icon-only Edit control with tooltip and native V13 `DialogV2.input` editor.

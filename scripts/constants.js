@@ -1,5 +1,5 @@
 export const MODULE_ID = "zft-turn-time";
-export const VERSION = "0.3.0";
+export const VERSION = "0.3.0-dev.1";
 
 export const SETTINGS = Object.freeze({
   CAMPAIGN_STATS: "campaignStats",
