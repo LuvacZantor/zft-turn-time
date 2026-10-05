@@ -184,12 +184,12 @@ All module diagnostic logs begin with:
 Expected initialization:
 
 ```text
-[ZFT] 🛠️ v0.3.0-dev.2 | Initializing ZFT Turn Time
+[ZFT] 🛠️ v0.3.0 | Initializing ZFT Turn Time
 [ZFT] ⚙️ Turn Time settings registered
 [ZFT] 🪝 Combat timing hooks registered
 [ZFT] 🖥️ Combat Tracker UI hooks registered
-[ZFT] ✅ v0.3.0-dev.2 | ZFT Turn Time initialized
-[ZFT] 🚦 v0.3.0-dev.2 | Ready | ...
+[ZFT] ✅ v0.3.0 | ZFT Turn Time initialized
+[ZFT] 🚦 v0.3.0 | Ready | ...
 ```
 
 Expected turn transition:
@@ -233,12 +233,7 @@ Recommended release validation:
 14. Confirm NPC exclusion and maximum-turn rejection settings behave as configured.
 15. Confirm campaign actor/user aggregates remain available through the public API.
 
-## v0.3.0-dev.2
-
-- Added color-coded timer controls: Pause amber, Resume green, Reset red, Edit blue, and Report purple.
-- Added stronger matching hover states while keeping the button treatment restrained.
-
-## v0.3.0-dev.1
+## v0.3.0
 
 - Added an icon-only Reset control with tooltip for the current active turn timer.
 - Added an icon-only Edit control with tooltip and native V13 `DialogV2.input` editor.
@@ -246,6 +241,8 @@ Recommended release validation:
 - Edit accepts seconds, `M:SS`, or `H:MM:SS`.
 - Reset/Edit preserve the current paused or running state.
 - Added `resetTimer()` and `setTimerElapsed(elapsedMs)` to the public API.
+- Added color-coded timer controls: Pause amber, Resume green, Reset red, Edit blue, and Report purple.
+- Added stronger matching hover states while keeping the button treatment restrained.
 
 ## v0.2.0
 
