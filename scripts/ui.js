@@ -1,12 +1,21 @@
 import { MODULE_ID, SETTINGS } from "./constants.js";
 import { averageMs, getCampaignStats, getCombatState } from "./store.js";
-import { getActiveElapsedMs, isPrimaryGM, pauseTimer, resumeTimer } from "./timer.js";
+import {
+  getActiveElapsedMs,
+  isPrimaryGM,
+  pauseTimer,
+  resetTimer,
+  resumeTimer,
+  setTimerElapsed
+} from "./timer.js";
 
 const BADGE_CLASS = "zft-turn-time-badge";
 const INFO_CLASS = "zft-turn-time-info";
 const CONTROLS_CLASS = "zft-turn-time-controls";
 const REPORT_BUTTON_CLASS = "zft-turn-time-report";
 const PAUSE_BUTTON_CLASS = "zft-turn-time-pause";
+const RESET_BUTTON_CLASS = "zft-turn-time-reset";
+const EDIT_BUTTON_CLASS = "zft-turn-time-edit";
 
 let liveInterval = null;
 
@@ -33,6 +42,34 @@ export function formatDuration(ms, { compact = true } = {}) {
   }
 
   return compact ? `${seconds}s` : `0:${String(seconds).padStart(2, "0")}`;
+}
+
+function parseDurationInput(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+
+  if (/^\d+(?:\.\d+)?$/.test(text)) {
+    const seconds = Number(text);
+    return Number.isFinite(seconds) ? Math.round(seconds * 1000) : null;
+  }
+
+  const parts = text.split(":");
+  if (parts.length < 2 || parts.length > 3 || parts.some(part => !/^\d+$/.test(part))) {
+    return null;
+  }
+
+  const values = parts.map(Number);
+  const seconds = values.at(-1);
+  const minutes = values.at(-2);
+
+  if (seconds >= 60) return null;
+  if (parts.length === 3 && minutes >= 60) return null;
+
+  const totalSeconds = parts.length === 2
+    ? (minutes * 60) + seconds
+    : (values[0] * 3600) + (minutes * 60) + seconds;
+
+  return totalSeconds * 1000;
 }
 
 function createBadge({ currentMs = null, average = null, count = 0, active = false, paused = false, mode = "both" }) {
@@ -240,6 +277,122 @@ function createPauseButton() {
   return button;
 }
 
+function updateTimerActionButton(button) {
+  const state = getCombatState(game.combat);
+  button.disabled = !state.active?.combatantId;
+}
+
+function createResetButton() {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = RESET_BUTTON_CLASS;
+  button.dataset.tooltip = "Reset current turn timer";
+  button.setAttribute("aria-label", "Reset current turn timer");
+  button.innerHTML = `<i class="fa-solid fa-arrow-rotate-left"></i>`;
+  updateTimerActionButton(button);
+
+  button.addEventListener("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const combat = game.combat;
+    if (!combat) return;
+
+    button.disabled = true;
+    try {
+      await resetTimer(combat);
+    } finally {
+      updateLiveBadges();
+    }
+  });
+
+  return button;
+}
+
+async function promptTimerEdit(combat = game.combat) {
+  if (!combat) {
+    ui.notifications?.warn("ZFT Turn Time: No active combat.");
+    return false;
+  }
+
+  const state = getCombatState(combat);
+  const active = state.active;
+  if (!active?.combatantId) {
+    ui.notifications?.warn("ZFT Turn Time: No active turn timer.");
+    return false;
+  }
+
+  const elapsedMs = getActiveElapsedMs(active);
+  if (!Number.isFinite(elapsedMs)) {
+    ui.notifications?.warn("ZFT Turn Time: Current timer value is invalid.");
+    return false;
+  }
+
+  const combatant = combat.combatants?.get(active.combatantId);
+  const name = combatant?.name ?? combatant?.actor?.name ?? "Current combatant";
+  const currentValue = formatDuration(elapsedMs, { compact: false });
+  const DialogV2 = foundry.applications.api.DialogV2;
+
+  const value = await DialogV2.input({
+    window: { title: "Edit Turn Timer" },
+    content: `
+      <div class="zft-turn-time-edit-dialog">
+        <p>Set elapsed time for <strong>${escapeHtml(name)}</strong>.</p>
+        <div class="form-group">
+          <label>Elapsed Time</label>
+          <div class="form-fields">
+            <input type="text" name="elapsed" value="${escapeHtml(currentValue)}" placeholder="M:SS or H:MM:SS" autofocus>
+          </div>
+          <p class="hint">Use seconds, M:SS, or H:MM:SS.</p>
+        </div>
+      </div>
+    `,
+    ok: {
+      label: "Set Timer",
+      callback: (_event, button) => button.form.elements.elapsed.value
+    },
+    rejectClose: false,
+    modal: true
+  });
+
+  if (value === null) return false;
+
+  const newElapsedMs = parseDurationInput(value);
+  if (!Number.isFinite(newElapsedMs)) {
+    ui.notifications?.warn("ZFT Turn Time: Enter seconds, M:SS, or H:MM:SS.");
+    return false;
+  }
+
+  return setTimerElapsed(newElapsedMs, combat);
+}
+
+function createEditButton() {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = EDIT_BUTTON_CLASS;
+  button.dataset.tooltip = "Edit current turn timer";
+  button.setAttribute("aria-label", "Edit current turn timer");
+  button.innerHTML = `<i class="fa-solid fa-pen-to-square"></i>`;
+  updateTimerActionButton(button);
+
+  button.addEventListener("click", async event => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const combat = game.combat;
+    if (!combat) return;
+
+    button.disabled = true;
+    try {
+      await promptTimerEdit(combat);
+    } finally {
+      updateLiveBadges();
+    }
+  });
+
+  return button;
+}
+
 function createReportButton() {
   const button = document.createElement("button");
   button.type = "button";
@@ -266,6 +419,8 @@ function injectModuleControls(root) {
   const controls = document.createElement("div");
   controls.className = CONTROLS_CLASS;
   controls.append(createPauseButton());
+  controls.append(createResetButton());
+  controls.append(createEditButton());
 
   if (game.settings.get(MODULE_ID, SETTINGS.SHOW_REPORT_BUTTON)) {
     controls.append(createReportButton());
@@ -304,6 +459,9 @@ function updateLiveBadges() {
     decorateCombatTracker(tracker);
     for (const button of tracker.querySelectorAll(`.${PAUSE_BUTTON_CLASS}`)) {
       updatePauseButton(button);
+    }
+    for (const button of tracker.querySelectorAll(`.${RESET_BUTTON_CLASS}, .${EDIT_BUTTON_CLASS}`)) {
+      updateTimerActionButton(button);
     }
   }
 }

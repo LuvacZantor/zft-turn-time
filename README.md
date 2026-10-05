@@ -15,8 +15,11 @@ ZFT Turn Time is a Foundry VTT V13 module for tracking real-world combat turn du
 - Live current-turn timer in the Combat Tracker
 - Turn timing displayed beneath the combatant name to preserve horizontal tracker space
 - GM-controlled pause/resume timer
+- GM-only reset control for restarting the current live turn timer
+- GM-only edit control for correcting the current live turn timer
+- Reset/edit preserve the timer's current paused or running state
 - Paused time excluded from turn duration, averages, and totals
-- Dedicated Pause/Resume and Report control row beneath Foundry's native combat controls
+- Dedicated Pause/Resume, Reset, Edit, and Report control row beneath Foundry's native combat controls
 - Campaign actor averages
 - User averages
 - Per-combat encounter combatant statistics
@@ -56,8 +59,15 @@ Warrior Veteran
 The module adds its own control row beneath Foundry's native combat controls:
 
 ```text
-[ Pause Timer / Resume Timer ]   [ Report ]
+[ Pause Timer / Resume Timer ]   [ ↺ ]   [ ✎ ]   [ Report ]
 ```
+
+Reset and Edit are icon-only controls with tooltips to conserve Combat Tracker width.
+
+- Reset restarts only the active combatant's current live turn at zero.
+- Edit sets the active combatant's current live elapsed time.
+- Neither control changes previously recorded turns, averages, totals, or campaign statistics.
+- If the timer is paused, Reset/Edit leave it paused. If it is running, it continues running from the new value.
 
 Foundry's native combat controls are not modified.
 
@@ -107,6 +117,8 @@ api.formatDuration(65000);
 await api.pauseTimer();
 await api.resumeTimer();
 await api.toggleTimer();
+await api.resetTimer();
+await api.setTimerElapsed(90000);
 await api.postCombatReport();
 await api.resetCampaignStats();
 
@@ -172,12 +184,12 @@ All module diagnostic logs begin with:
 Expected initialization:
 
 ```text
-[ZFT] 🛠️ v0.2.0 | Initializing ZFT Turn Time
+[ZFT] 🛠️ v0.3.0 | Initializing ZFT Turn Time
 [ZFT] ⚙️ Turn Time settings registered
 [ZFT] 🪝 Combat timing hooks registered
 [ZFT] 🖥️ Combat Tracker UI hooks registered
-[ZFT] ✅ v0.2.0 | ZFT Turn Time initialized
-[ZFT] 🚦 v0.2.0 | Ready | ...
+[ZFT] ✅ v0.3.0 | ZFT Turn Time initialized
+[ZFT] 🚦 v0.3.0 | Ready | ...
 ```
 
 Expected turn transition:
@@ -210,13 +222,25 @@ Recommended release validation:
 3. Confirm timing appears beneath the combatant name in both the sidebar and popped-out Encounter Tracker.
 4. Confirm Foundry's native combat controls remain visible and unchanged.
 5. Pause the active timer and confirm the displayed duration stops advancing.
-6. Resume and confirm timing continues from the paused value.
-7. Advance a normal active turn and confirm exactly one sample is recorded.
-8. Advance a turn while paused and confirm only accumulated active time is recorded.
-9. End combat while paused and confirm the final combatant is included in the automatic report.
-10. Confirm the Report button posts Average, Turns, and Total for the encounter.
-11. Confirm NPC exclusion and maximum-turn rejection settings behave as configured.
-12. Confirm campaign actor/user aggregates remain available through the public API.
+6. Click Reset and confirm the current active timer returns to zero without changing prior recorded turns.
+7. While paused, click Reset and confirm the timer remains paused at zero.
+8. Click Edit, enter `1:30`, and confirm the active timer changes to 1:30 and preserves its paused/running state.
+9. Resume and confirm timing continues from the saved active duration.
+10. Advance a normal active turn and confirm exactly one sample is recorded.
+11. Advance a turn while paused and confirm only accumulated active time is recorded.
+12. End combat while paused and confirm the final combatant is included in the automatic report.
+13. Confirm the Report button posts Average, Turns, and Total for the encounter.
+14. Confirm NPC exclusion and maximum-turn rejection settings behave as configured.
+15. Confirm campaign actor/user aggregates remain available through the public API.
+
+## v0.3.0
+
+- Added an icon-only Reset control with tooltip for the current active turn timer.
+- Added an icon-only Edit control with tooltip and native V13 `DialogV2.input` editor.
+- Reset affects only the current live turn and does not change previously recorded statistics.
+- Edit accepts seconds, `M:SS`, or `H:MM:SS`.
+- Reset/Edit preserve the current paused or running state.
+- Added `resetTimer()` and `setTimerElapsed(elapsedMs)` to the public API.
 
 ## v0.2.0
 
